@@ -1,3 +1,5 @@
+im noticing that there is a black highlight on the text? and it cant overlap? how can I retain the current effects while still keeping the multiply blend overlay aspect of the type?
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -47,7 +49,7 @@ const statements = [
   "Trying to control what children and people generally read, to push a conservative narrative.",
   "Did you read the book? Do you know the context of whatever you’re pulling from it?",
   "I don’t think we’re past the point of no return. If you start believing that, you’ve given up hope.",
-  "Can I read this to a class, or order it for a class? What pushback will I get? Second guessing.",
+  "Can I read this to a class, or order it for a class? What push back will I get? Second guessing.",
   "A lot of districts in Georgia are very willing to ban books.",
   "When I was teaching in Virginia I had a lot more freedom.",
   "Censorship directly affects students. It directly affects everyone.",
@@ -94,8 +96,7 @@ const statements = [
   "It’s important to ensure that freedom of information is protected, the goal is always to represent a diverse community, and diverse ideas that maybe not everyone in the community agrees with.",
   "Integrate your diverse collection into regular displays instead of just doing like, “here’s our LGBTQ display,” They should be integrated with other topics so that these identities are just things people get used to seeing outside of exclusionary contexts.",
   "If your focus is to protect the children, if your child has a smartphone, I’m really sorry to tell you that you cannot protect your child from that harm. They’re going to experience it in one way or another.",
-  "Don’t go after free institutions that provide for their communities.",
-  "If you don’t want your kid to read a book, tell the library that every single book that my child reads should be processed through me, and we’ll be like, okay crazy, but we’ll do it.",
+  "Don’t go after free institutions that provide for their communities. If you don’t want your kid to read a book, tell the library that every single book that my child reads should be processed through me, and we’ll be like, okay crazy, but we’ll do it.",
   "I think people will always try."
 ];
 
@@ -127,38 +128,47 @@ function drawInkChar(char, x, y) {
   ctx.putImageData(img, x - 2, y - 24);
 }
 
-function drawInkChar(char, x, y) {
-  ctx.save();
+// Particle-style decay
+function fadeSentence(x, y, w, h) {
+  const start = performance.now();
+  const duration = 15000;
 
-  // Set multiply blend mode for ink
-  ctx.globalCompositeOperation = "multiply"; 
+  const snapshot = ctx.getImageData(x, y, w, h);
 
-  ctx.fillStyle = "white"; // ink color
-  ctx.shadowColor = "rgba(255,255,255,0.35)";
-  ctx.shadowBlur = 1.2;
+  function tick(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const d = snapshot.data;
 
-  for (let i = 0; i < 3; i++) {
-    const ox = (Math.random() - 0.5) * 0.6;
-    const oy = (Math.random() - 0.5) * 0.6;
-    ctx.fillText(char, x + ox, y + oy);
-  }
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) continue;
 
-  ctx.restore();
+      const survivalRate = 0.15; // ~15% pixels survive
+      if (Math.random() > survivalRate) {
+        if (Math.random() < t * 0.2) {
+          d[i + 3] = 0; // dissolve pixel rapidly
+        }
+      } else {
+        d[i + 3] *= 0.995; // surviving ghost slowly fades
+      }
 
-  // Apply grain/dust after drawing text
-  const w = ctx.measureText(char).width + 4;
-  const h = 30;
-  const img = ctx.getImageData(x - 2, y - 24, w, h);
-  const data = img.data;
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] > 0) {
-      const grain = (Math.random() - 0.5) * 25;
-      data[i] += grain;
-      data[i + 1] += grain;
-      data[i + 2] += grain;
+      const g = (Math.random() - 0.5) * (12 + t * 20);
+      d[i] += g;
+      d[i + 1] += g;
+      d[i + 2] += g;
+
+      // fade toward light gray
+      const fade = t * 0.8;
+      d[i] += (235 - d[i]) * fade;
+      d[i + 1] += (235 - d[i + 1]) * fade;
+      d[i + 2] += (235 - d[i + 2]) * fade;
     }
+
+    ctx.putImageData(snapshot, x, y);
+
+    if (t < 1) requestAnimationFrame(tick);
   }
-  ctx.putImageData(img, x - 2, y - 24);
+
+  requestAnimationFrame(tick);
 }
 
 // Click typing with word-wrap
